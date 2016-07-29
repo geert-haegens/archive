@@ -15,6 +15,10 @@ import com.google.common.base.Throwables;
 
 import daos.FileDAO;
 import enums.CharValues;
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JasperCompileManager;
+import net.sf.jasperreports.engine.JasperReport;
+import net.sf.jasperreports.engine.util.JRLoader;
 
 public class SQLupdater {
 	
@@ -37,20 +41,21 @@ public class SQLupdater {
 			String logInfo = "STARTING LOG" + CharValues.CRLF + new Date().toString() + CharValues.CRLF + CharValues.CRLF;
 			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 			
-			Set<String> jasperFilesNoExt = FileDAO.scanStructure("jasper", false, true);
-			
 			FileDAO.createBuFolders();
 			FileDAO.moveFilesToBackupFolder("jrxml");
 			FileDAO.copyFilesToBackupFolder("jasper");
 			
+			Set<String> jasperFilesNoExt = FileDAO.scanStructure("jasper", false, true);
 			
-
-			/*
 			for (String pathAndFilenameNoExt : jasperFilesNoExt) {
 
 				try {
 					JasperReport report = (JasperReport) JRLoader.loadObjectFromFile(pathAndFilenameNoExt + ".jasper");
-					JRXmlWriter.writeReport(report, pathAndFilenameNoExt + ".jrxml", "UTF-8");
+					//JRXmlWriter.writeReport(report, pathAndFilenameNoExt + ".jrxml", "UTF-8");
+					String xmlStr = JasperCompileManager.writeReportToXml(report);
+					System.out.println("\n****************\nfile = " + pathAndFilenameNoExt + ".jasper");
+					normaliseJRxml(xmlStr);
+					
 					log.put(pathAndFilenameNoExt + ".jasper", "");
 				} catch (NoClassDefFoundError ex) {
 					log.put(pathAndFilenameNoExt + ".jasper",
@@ -60,9 +65,9 @@ public class SQLupdater {
 							CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
 				}
 			}
-*/
+
 			FileDAO.writeLog(logPathAndFilename, log);
-			System.out.println("Files decompiled.");
+			System.out.println("Files have been altered for correct $SQL param.");
 
 		} catch (Exception e) {
 			JOptionPane.showMessageDialog(null,
@@ -70,6 +75,49 @@ public class SQLupdater {
 					JOptionPane.ERROR_MESSAGE);
 			System.exit(0);
 		}
+	}
+	
+	static int i = 1;
+	private static String normaliseJRxml(String xml) throws RuntimeException {
+		
+		String xmlLC = xml.toLowerCase();
+		
+		String searchSqlParam = new String("<parameter name=\"sql\"");
+		String searchCloseTag = new String("/>");
+		int startPosSqlParam = xmlLC.indexOf(searchSqlParam);
+		int stopPosSqlParam = xml.indexOf(searchCloseTag, startPosSqlParam) + searchCloseTag.length();
+		
+		boolean sqlParamPresent = (startPosSqlParam > 0 && stopPosSqlParam > startPosSqlParam);
+		if (!sqlParamPresent) {
+			//System.out.println("sqlParam not found :  start="+startPosSqlParam+" / stop="+stopPosSqlParam);
+		}
+		
+		String searchQueryStart = new String("<queryString").toLowerCase();
+		String searchQueryEnd = new String("</queryString>").toLowerCase();
+		int startPosQueryTag = xmlLC.indexOf(searchQueryStart);
+		int stopPosQueryTag = xmlLC.indexOf(searchQueryEnd, startPosQueryTag) + searchQueryEnd.length();
+		if (startPosQueryTag < 0 || stopPosQueryTag < 0) {
+			throw new RuntimeException("No tag <queryString> not found in file");
+		}
+		String queryTag = xml.substring(startPosQueryTag, stopPosQueryTag);
+		
+		//System.out.println("\nqueryString ("+ (i++) +") :  start="+startPosQueryTag+" / stop="+stopPosQueryTag);
+		//System.out.println("queryString found :  " + queryTag);
+		
+		String searchCDATAstart = new String("<![CDATA[").toLowerCase();
+		String searchCDATAend = new String("]]>");
+		int startPosCDATA = queryTag.toLowerCase().indexOf(searchCDATAstart) + searchCDATAstart.length();
+		int stopPosCDATA = queryTag.indexOf(searchCDATAend, startPosCDATA);
+		String cdata = queryTag.substring(startPosCDATA, stopPosCDATA);
+		
+		//System.out.println("\nCDATA ("+ (i++) +") :  start="+startPosCDATA+" / stop="+stopPosCDATA);
+		//System.out.println("CDATA found :  " + cdata);
+		
+		boolean sqlParamPresentInCDATA = cdata.equals("$P!{sql}");
+		//System.out.println("$P!{sql} = " + sqlParamPresentInCDATA);
+		
+		
+		return null;
 	}
 
 }

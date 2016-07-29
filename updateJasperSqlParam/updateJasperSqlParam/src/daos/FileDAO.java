@@ -95,7 +95,7 @@ public class FileDAO {
 			}
 		}
 		builder.append(CharValues.CRLF);
-		builder.append("DECOMPILED : " + correct + CharValues.CRLF);
+		builder.append("ALTERED : " + correct + CharValues.CRLF);
 		for (Entry<String, String> entry : log.entrySet()) {
 			if (entry.getValue().length() == 0) {
 				builder.append(entry.getKey() + CharValues.CRLF);
@@ -109,7 +109,7 @@ public class FileDAO {
 			}
 			*/
 			Files.write(Paths.get(logPathAndFilename), builder.toString().getBytes("utf-8"), StandardOpenOption.APPEND);
-			System.out.println("Log :  " + logPathAndFilename);
+			System.out.println("\nLog :  " + logPathAndFilename);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
