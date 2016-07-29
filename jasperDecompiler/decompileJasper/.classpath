@@ -21,6 +21,6 @@
 	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/xalan-2.7.1.jar"/>
 	<classpathentry kind="lib" path="D:/Geert/INSTALL/JAVA/commons-collections-3.2.2/commons-collections-3.2.2.jar"/>
 	<classpathentry kind="lib" path="D:/Geert/INSTALL/JAVA/guava-16.0.1.jar"/>
-	<classpathentry kind="lib" path="D:/Geert/INSTALL/JAVA/barcode4j-1.0.jar/barcode4j-1.0.jar"/>
+	<classpathentry kind="lib" path="D:/Geert/INSTALL/JAVA/barcode4j-2.0.jar/barcode4j-2.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
