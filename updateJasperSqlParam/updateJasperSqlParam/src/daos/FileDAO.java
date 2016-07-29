@@ -3,7 +3,9 @@ package daos;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Collection;
 import java.util.Date;
@@ -140,16 +142,49 @@ public class FileDAO {
 			
 			for (String sFile : filesToMove) {
 				File file = new File(sFile + "." + ext);
-				System.out.println("file to move : "+ file.getAbsolutePath());
+				//System.out.println("file to move : "+ file.getAbsolutePath());
 				String moveToFileName = SQLupdater.backupPathUsed + "\\" + file.getName();
 				if (!file.renameTo(new File(moveToFileName))) {
-					throw new RuntimeException("Unable to move file " + moveToFileName + " to backup folder !");
+					throw new RuntimeException("Unable to move file " + file.getAbsolutePath() + " to backup folder !");
 				}
 				
 			}
 			
 			if (filesToMove.size() > 0) {
 				String logInfo = "INFO :  MOVED *.jrxml files to backup folder (" + filesToMove.size() + ")" + CharValues.CRLF + CharValues.CRLF;
+				System.out.println(logInfo);
+				Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+				
+			}
+			return;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		
+	}
+	
+public static void copyFilesToBackupFolder(String ext) throws RuntimeException {
+		
+		Set<String> filesToCopy = new HashSet<>();
+		try {
+			filesToCopy.addAll(FileDAO.scanStructure(ext, false, false));
+			
+			for (String sFile : filesToCopy) {
+				
+				File sourcheFile = new File(sFile + "." + ext);
+				Path sourcePath = Paths.get(sourcheFile.toURI());
+				//System.out.println("file to copy : "+ sourcheFile.getAbsolutePath());
+				File destFile = new File(SQLupdater.backupPathUsed);
+				Path destPath = Paths.get(destFile.toURI());
+				boolean failure = Files.copy(sourcePath, destPath.resolve(sourcePath.getFileName()), StandardCopyOption.COPY_ATTRIBUTES) == null;
+				if (failure) {
+					throw new RuntimeException("Unable to copy file " + sourcheFile.getAbsolutePath() + " to backup folder !");
+				}
+				
+			}
+			
+			if (filesToCopy.size() > 0) {
+				String logInfo = "INFO :  COPIED *.jasper files to backup folder (" + filesToCopy.size() + ")" + CharValues.CRLF + CharValues.CRLF;
 				System.out.println(logInfo);
 				Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 				

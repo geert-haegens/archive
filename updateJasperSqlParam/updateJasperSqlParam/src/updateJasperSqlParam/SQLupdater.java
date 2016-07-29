@@ -41,6 +41,7 @@ public class SQLupdater {
 			
 			FileDAO.createBuFolders();
 			FileDAO.moveFilesToBackupFolder("jrxml");
+			FileDAO.copyFilesToBackupFolder("jasper");
 			
 			
 
