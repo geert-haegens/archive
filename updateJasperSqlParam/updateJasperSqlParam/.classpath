@@ -2,25 +2,25 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/commons-beanutils-1.9.0.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/commons-digester-2.1.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/commons-io.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/commons-logging-1.1.1.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/ecj-4.3.1.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/groovy-all-2.4.3.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/itext-2.1.7.js4.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jackson-annotations-2.1.4.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jackson-core-2.1.4.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jackson-databind-2.1.4.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jasperreports-6.2.0.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jcommon-1.0.23.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jfreechart-1.0.19.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/poi-3.10.1.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/serializer.jar"/>
-	<classpathentry kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/xalan-2.7.1.jar"/>
-	<classpathentry kind="lib" path="D:/Geert/INSTALL/JAVA/commons-collections-3.2.2/commons-collections-3.2.2.jar"/>
-	<classpathentry kind="lib" path="D:/Geert/INSTALL/JAVA/guava-16.0.1.jar"/>
-	<classpathentry kind="lib" path="D:/Geert/INSTALL/JAVA/barcode4j-2.0.jar/barcode4j-2.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/commons-beanutils-1.9.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/commons-digester-2.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/commons-io.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/commons-logging-1.1.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/ecj-4.3.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/groovy-all-2.4.3.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/itext-2.1.7.js4.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jackson-annotations-2.1.4.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jackson-core-2.1.4.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jackson-databind-2.1.4.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jasperreports-6.2.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jcommon-1.0.23.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/jfreechart-1.0.19.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/poi-3.10.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/serializer.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/DEV/Servoy7/application_server/plugins/servoy_jasperreports/xalan-2.7.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="D:/Geert/INSTALL/JAVA/commons-collections-3.2.2/commons-collections-3.2.2.jar"/>
+	<classpathentry exported="true" kind="lib" path="D:/Geert/INSTALL/JAVA/guava-16.0.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="D:/Geert/INSTALL/JAVA/barcode4j-2.0.jar/barcode4j-2.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

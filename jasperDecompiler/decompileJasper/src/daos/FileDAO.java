@@ -33,7 +33,7 @@ public class FileDAO {
 		Path currentRelativePath = Paths.get("");
 
 		// TODO : in commentaar zetten !
-		//currentRelativePath = Paths.get("d:\\geert\\temp");
+		currentRelativePath = Paths.get("d:\\geert\\temp");
 		String path = currentRelativePath.toAbsolutePath().toString();
 		decompiler.logPathAndFilename = path + "\\jasperDecompiler.log";
 
