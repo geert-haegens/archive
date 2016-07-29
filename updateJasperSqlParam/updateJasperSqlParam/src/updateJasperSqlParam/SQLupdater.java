@@ -1,7 +1,10 @@
 package updateJasperSqlParam;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -30,9 +33,14 @@ public class SQLupdater {
 		try {
 
 			Map<String, String> log = new HashMap<>();
-			Set<String> jasperFilesNoExt = FileDAO.scanStructure();
+			
+			String logInfo = "STARTING LOG" + CharValues.CRLF + new Date().toString() + CharValues.CRLF + CharValues.CRLF;
+			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+			
+			Set<String> jasperFilesNoExt = FileDAO.scanStructure("jasper", false, true);
 			
 			FileDAO.createBuFolders();
+			FileDAO.moveFilesToBackupFolder("jrxml");
 			
 			
 

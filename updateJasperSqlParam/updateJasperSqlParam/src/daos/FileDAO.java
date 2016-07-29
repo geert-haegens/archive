@@ -3,7 +3,6 @@ package daos;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Collection;
@@ -16,6 +15,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
+import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 
 import enums.CharValues;
@@ -28,7 +28,7 @@ public class FileDAO {
 	public FileDAO() {
 	}
 
-	public static Set<String> scanStructure() throws RuntimeException {
+	public static Set<String> scanStructure(String ext, boolean includeSubDir, boolean consoleOutput) throws RuntimeException {
 
 		try {
 
@@ -37,17 +37,19 @@ public class FileDAO {
 					JOptionPane.INFORMATION_MESSAGE);
 			*/
 			
-			String logInfo = "STARTING LOG" + CharValues.CRLF + new Date().toString() + CharValues.CRLF + CharValues.CRLF;
-			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-			
 			File dir = new File("");
 			if (dir.getName().startsWith(".", 0)) {
 				return null;
 			}
+			
+			IOFileFilter includeSubDirDFF = null;
+			if (includeSubDir) {
+				includeSubDirDFF = DirectoryFileFilter.DIRECTORY;
+			}
 
 			Set<String> absFiles = new HashSet<>();
-			Collection<File> files = FileUtils.listFiles(new File(SQLupdater.currentRelativePath), TrueFileFilter.INSTANCE,
-					DirectoryFileFilter.DIRECTORY);
+			Collection<File> files = FileUtils.listFiles(new File(SQLupdater.currentRelativePath), TrueFileFilter.INSTANCE, includeSubDirDFF
+					);
 			for (File file : files) {
 				if (file.getAbsolutePath().contains("\\.")) {
 					continue;
@@ -55,12 +57,15 @@ public class FileDAO {
 				if (file.isDirectory() && !file.equals(dir)) {
 					continue;
 				}
-				if (!file.isDirectory() && Pattern.matches(".+\\.jasper$", file.getName().toLowerCase())) {
+				if (!file.isDirectory() && Pattern.matches(".+\\."+ext+"$", file.getName().toLowerCase())) {
 					int lenghtNoExt = file.getAbsolutePath().lastIndexOf('.');
 					absFiles.add(file.getAbsolutePath().substring(0, lenghtNoExt));
 				}
 			}
-			System.out.println("Scanned [" + SQLupdater.currentRelativePath + "] = " + absFiles.size());
+			if (consoleOutput) {
+				System.out.println("Scanned [" + SQLupdater.currentRelativePath + "] = " + absFiles.size());
+			}
+			
 			return absFiles;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -117,7 +122,7 @@ public class FileDAO {
 				throw new RuntimeException("Unable to create directory " + backupPath);
 			};
 			SQLupdater.backupPathUsed = backupPath;
-			String logInfo = "Created backup folder (original files can be found here)" + CharValues.CRLF + SQLupdater.backupPathUsed + CharValues.CRLF;
+			String logInfo = "Created backup folder (original files can be found here)" + CharValues.CRLF + SQLupdater.backupPathUsed + CharValues.CRLF + CharValues.CRLF;
 			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 		} catch (SecurityException e) {
 			throw new RuntimeException(e);
@@ -126,4 +131,34 @@ public class FileDAO {
 		}
 		
 	}
+	
+	public static void moveFilesToBackupFolder(String ext) throws RuntimeException {
+		
+		Set<String> filesToMove = new HashSet<>();
+		try {
+			filesToMove.addAll(FileDAO.scanStructure(ext, false, false));
+			
+			for (String sFile : filesToMove) {
+				File file = new File(sFile + "." + ext);
+				System.out.println("file to move : "+ file.getAbsolutePath());
+				String moveToFileName = SQLupdater.backupPathUsed + "\\" + file.getName();
+				if (!file.renameTo(new File(moveToFileName))) {
+					throw new RuntimeException("Unable to move file " + moveToFileName + " to backup folder !");
+				}
+				
+			}
+			
+			if (filesToMove.size() > 0) {
+				String logInfo = "INFO :  MOVED *.jrxml files to backup folder (" + filesToMove.size() + ")" + CharValues.CRLF + CharValues.CRLF;
+				System.out.println(logInfo);
+				Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+				
+			}
+			return;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		
+	}
+	
 }
