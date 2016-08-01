@@ -50,7 +50,8 @@ public class SQLupdater {
 			for (String pathAndFilenameNoExt : jasperFilesNoExt) {
 
 				try {
-					JasperReport report = (JasperReport) JRLoader.loadObjectFromFile(pathAndFilenameNoExt + ".jasper");
+					String jasperFilename = pathAndFilenameNoExt + ".jasper";
+					JasperReport report = (JasperReport) JRLoader.loadObjectFromFile(jasperFilename);
 					//JRXmlWriter.writeReport(report, pathAndFilenameNoExt + ".jrxml", "UTF-8");
 					String xmlStr = JasperCompileManager.writeReportToXml(report);
 					System.out.println("\n****************\nfile = " + pathAndFilenameNoExt + ".jasper");
@@ -59,9 +60,10 @@ public class SQLupdater {
 					if (xmlModif == null) {
 						System.out.println("NO MODIF :  " + pathAndFilenameNoExt + ".jasper\n");
 					} else {
-						String pxmlFilename = pathAndFilenameNoExt + ".jrxml";
-						Files.write(Paths.get(pxmlFilename), xmlModif.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-						System.out.println("MODIFIED :  " + pxmlFilename);
+						String jrxmlFilename = pathAndFilenameNoExt + ".jrxml";
+						Files.write(Paths.get(jrxmlFilename), xmlModif.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+						System.out.println("MODIFIED :  " + jrxmlFilename);
+						JasperCompileManager.compileReportToFile(jrxmlFilename, jasperFilename);
 					}
 					
 					log.put(pathAndFilenameNoExt + ".jasper", "");
