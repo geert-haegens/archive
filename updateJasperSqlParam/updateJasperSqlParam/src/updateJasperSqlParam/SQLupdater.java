@@ -116,14 +116,15 @@ public class SQLupdater {
 		String searchCDATAend = new String("]]>");
 		int startPosCDATA = queryTag.toLowerCase().indexOf(searchCDATAstart) + searchCDATAstart.length();
 		int stopPosCDATA = queryTag.indexOf(searchCDATAend, startPosCDATA);
-		String cdata = queryTag.substring(startPosCDATA, stopPosCDATA);
+		String cdataQueryTag = queryTag.substring(startPosCDATA, stopPosCDATA);
 		
 		//System.out.println("\nCDATA ("+ (i++) +") :  start="+startPosCDATA+" / stop="+stopPosCDATA);
-		//System.out.println("CDATA found :  " + cdata);
+		System.out.println("CDATA found :  " + cdataQueryTag);
 		
-		boolean sqlParamPresentInCDATA = cdata.equals("$P!{sql}");
+		boolean sqlParamPresentInCDATA = cdataQueryTag.equals("$P!{sql}");
 		//System.out.println("$P!{sql} = " + sqlParamPresentInCDATA);
 		
+		/*
 		// JASPER REPORT IS OK
 		if (sqlParamPresent && sqlParamPresentInCDATA) {
 			return null;
@@ -137,8 +138,42 @@ public class SQLupdater {
 			bxml.append(xml.substring(startPosQueryTag));
 			xml = bxml.toString();
 		}
+		*/
 		
-		return xml;
+		// NEW SQL PARAM
+		StringBuilder newSQlParam = new StringBuilder();
+		newSQlParam.append("<parameter name=\"sql\" class=\"java.lang.String\">" + CharValues.CRLF);
+		newSQlParam.append("<defaultValueExpression><![CDATA[\"");
+		if (cdataQueryTag.length() > 0 && !sqlParamPresentInCDATA) {
+			newSQlParam.append(cdataQueryTag);
+		} 
+		newSQlParam.append("\"]]></defaultValueExpression>" + CharValues.CRLF);
+		newSQlParam.append("</parameter>" + CharValues.CRLF);
+		
+		// GENERATE CORRECT JASPER REPORT
+		
+		StringBuilder bxml = new StringBuilder();
+		
+		// sql param
+		if (sqlParamPresent) {
+			bxml.append(xml.substring(0, startPosSqlParam));
+			bxml.append(newSQlParam);
+			bxml.append(xml.substring(stopPosSqlParam, startPosQueryTag));
+		} else {
+			bxml.append(xml.substring(0, startPosQueryTag));
+			bxml.append(newSQlParam);
+		}
+		
+		// <queryString>
+		bxml.append("<queryString>" + CharValues.CRLF);
+		bxml.append("<![CDATA[$P!{sql}]]>" + CharValues.CRLF);
+		bxml.append("</queryString>" + CharValues.CRLF);
+
+		// xml after </queryString>
+		bxml.append(xml.substring(stopPosQueryTag));
+		
+		return bxml.toString();
+		
 	}
 
 }
