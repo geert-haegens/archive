@@ -59,7 +59,7 @@ public class SQLupdater {
 					if (xmlModif == null) {
 						System.out.println("NO MODIF :  " + pathAndFilenameNoExt + ".jasper\n");
 					} else {
-						String pxmlFilename = pathAndFilenameNoExt + ".pxml";
+						String pxmlFilename = pathAndFilenameNoExt + ".jrxml";
 						Files.write(Paths.get(pxmlFilename), xmlModif.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
 						System.out.println("MODIFIED :  " + pxmlFilename);
 					}
@@ -124,28 +124,12 @@ public class SQLupdater {
 		boolean sqlParamPresentInCDATA = cdataQueryTag.equals("$P!{sql}");
 		//System.out.println("$P!{sql} = " + sqlParamPresentInCDATA);
 		
-		/*
-		// JASPER REPORT IS OK
-		if (sqlParamPresent && sqlParamPresentInCDATA) {
-			return null;
-		}
-		
-		// JASPER REPORT SqlParam missing
-		if (!sqlParamPresent) {
-			StringBuilder bxml = new StringBuilder();
-			bxml.append(xml.substring(0, startPosQueryTag));
-			bxml.append("<parameter name=\"sql\" class=\"java.lang.String\"/>" + CharValues.CRLF);
-			bxml.append(xml.substring(startPosQueryTag));
-			xml = bxml.toString();
-		}
-		*/
-		
 		// NEW SQL PARAM
 		StringBuilder newSQlParam = new StringBuilder();
-		newSQlParam.append("<parameter name=\"sql\" class=\"java.lang.String\">" + CharValues.CRLF);
+		newSQlParam.append("<parameter name=\"sql\" class=\"java.lang.String\" isForPrompting=\"false\">" + CharValues.CRLF);
 		newSQlParam.append("<defaultValueExpression><![CDATA[\"");
 		if (cdataQueryTag.length() > 0 && !sqlParamPresentInCDATA) {
-			newSQlParam.append(cdataQueryTag);
+			newSQlParam.append(convertStringToOneLine(cdataQueryTag));
 		} 
 		newSQlParam.append("\"]]></defaultValueExpression>" + CharValues.CRLF);
 		newSQlParam.append("</parameter>" + CharValues.CRLF);
@@ -173,6 +157,26 @@ public class SQLupdater {
 		bxml.append(xml.substring(stopPosQueryTag));
 		
 		return bxml.toString();
+		
+	}
+	
+	private static String convertStringToOneLine(String str) {
+		
+		if (str == null) {
+			return "";
+		}
+		
+		str = str.replaceAll("\\n", " ");
+		str = str.replaceAll("\\r", " ");
+		int strLength = str.length();
+		int afterReplaceLength = 0;
+		while (strLength != afterReplaceLength) {
+			strLength = str.length();
+			str = str.replaceAll("  ", " ");
+			afterReplaceLength = str.length();
+		}
+		
+		return str;
 		
 	}
 
