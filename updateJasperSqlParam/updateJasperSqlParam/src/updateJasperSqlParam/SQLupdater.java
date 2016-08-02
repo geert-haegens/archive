@@ -21,51 +21,54 @@ import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.engine.util.JRLoader;
 
 public class SQLupdater {
-	
-	
+
 	// TODO : juiste pad in commentaar zetten !
-	//private static final Path userPath = Paths.get("").toAbsolutePath();
-	private static final Path userPath = Paths.get("d:\\geert\\temp\\jasperfiles").toAbsolutePath();
-	
+	private static final Path userPath = Paths.get("").toAbsolutePath();
+	// private static final Path userPath = Paths.get("d:\\geert\\temp\\jasperfiles").toAbsolutePath();
+
 	public static final String currentRelativePath = userPath.toString();
 	public static final String logPathAndFilename = currentRelativePath + "\\jasperSQLupdater.log";
 	public static final String backupPathMain = currentRelativePath + "\\BU_jasperSQLupdater";
 	public static String backupPathUsed = backupPathMain;
-	
+
 	public static void main(String[] args) {
 
 		try {
 
 			Map<String, String> log = new HashMap<>();
-			
-			String logInfo = "STARTING LOG" + CharValues.CRLF + new Date().toString() + CharValues.CRLF + CharValues.CRLF;
-			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-			
+
+			String logInfo = "STARTING LOG" + CharValues.CRLF + new Date().toString() + CharValues.CRLF
+					+ CharValues.CRLF;
+			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE,
+					StandardOpenOption.APPEND);
+
 			FileDAO.createBuFolders();
 			FileDAO.moveFilesToBackupFolder("jrxml");
 			FileDAO.copyFilesToBackupFolder("jasper");
-			
+
 			Set<String> jasperFilesNoExt = FileDAO.scanStructure("jasper", false, true);
-			
+
 			for (String pathAndFilenameNoExt : jasperFilesNoExt) {
 
 				try {
 					String jasperFilename = pathAndFilenameNoExt + ".jasper";
 					JasperReport report = (JasperReport) JRLoader.loadObjectFromFile(jasperFilename);
-					//JRXmlWriter.writeReport(report, pathAndFilenameNoExt + ".jrxml", "UTF-8");
+					// JRXmlWriter.writeReport(report, pathAndFilenameNoExt +
+					// ".jrxml", "UTF-8");
 					String xmlStr = JasperCompileManager.writeReportToXml(report);
 					System.out.println("\n****************\nfile = " + pathAndFilenameNoExt + ".jasper");
-					
+
 					String xmlModif = normaliseJRxml(xmlStr);
 					if (xmlModif == null) {
 						System.out.println("NO MODIF :  " + pathAndFilenameNoExt + ".jasper\n");
 					} else {
 						String jrxmlFilename = pathAndFilenameNoExt + ".jrxml";
-						Files.write(Paths.get(jrxmlFilename), xmlModif.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-						System.out.println("MODIFIED :  " + jrxmlFilename);
-						JasperCompileManager.compileReportToFile(jrxmlFilename, jasperFilename);
+						Files.write(Paths.get(jrxmlFilename), xmlModif.getBytes("utf-8"), StandardOpenOption.CREATE,
+								StandardOpenOption.WRITE);
+						FileDAO.writeJasper(pathAndFilenameNoExt);
+						System.out.println("MODIFIED :  " + jasperFilename);
 					}
-					
+
 					log.put(pathAndFilenameNoExt + ".jasper", "");
 				} catch (NoClassDefFoundError ex) {
 					log.put(pathAndFilenameNoExt + ".jasper",
@@ -86,22 +89,39 @@ public class SQLupdater {
 			System.exit(0);
 		}
 	}
-	
+
 	static int i = 1;
+
 	private static String normaliseJRxml(String xml) throws RuntimeException {
-		
+
 		String xmlLC = xml.toLowerCase();
-		
+
 		String searchSqlParam = new String("<parameter name=\"sql\"");
 		String searchCloseTag = new String("/>");
 		int startPosSqlParam = xmlLC.indexOf(searchSqlParam);
-		int stopPosSqlParam = xml.indexOf(searchCloseTag, startPosSqlParam) + searchCloseTag.length();
-		
+		int stopPosSqlParam = -1;
+		String sqlParam = "";
+		boolean sqlParamHasDefault = false;
+		if (startPosSqlParam >= 0) {
+			stopPosSqlParam = xml.indexOf(searchCloseTag, startPosSqlParam) + searchCloseTag.length();
+			sqlParam = xml.substring(startPosSqlParam, stopPosSqlParam);
+			// "/>" was not the endtag, </parameter> is :
+			searchCloseTag = new String("</parameter>");
+			if (sqlParam.toLowerCase().indexOf(searchCloseTag) >= 0) {
+				stopPosSqlParam = xml.indexOf(searchCloseTag, startPosSqlParam) + searchCloseTag.length();
+				sqlParamHasDefault = true;
+			}
+		}
+
 		boolean sqlParamPresent = (startPosSqlParam > 0 && stopPosSqlParam > startPosSqlParam);
 		if (!sqlParamPresent) {
-			System.out.println("sqlParam not found :  start="+startPosSqlParam+" / stop="+stopPosSqlParam);
+			System.out.println("sqlParam not found :  start=" + startPosSqlParam + " / stop=" + stopPosSqlParam);
+		} else {
+			System.out.println("sqlParam found :  " + sqlParam);
 		}
 		
+		
+
 		String searchQueryStart = new String("<queryString").toLowerCase();
 		String searchQueryEnd = new String("</queryString>").toLowerCase();
 		int startPosQueryTag = xmlLC.indexOf(searchQueryStart);
@@ -110,36 +130,47 @@ public class SQLupdater {
 			throw new RuntimeException("No tag <queryString> not found in file");
 		}
 		String queryTag = xml.substring(startPosQueryTag, stopPosQueryTag);
-		
-		//System.out.println("\nqueryString ("+ (i++) +") :  start="+startPosQueryTag+" / stop="+stopPosQueryTag);
-		//System.out.println("queryString found :  " + queryTag);
-		
+
+		// System.out.println("\nqueryString ("+ (i++) +") :
+		// start="+startPosQueryTag+" / stop="+stopPosQueryTag);
+		// System.out.println("queryString found : " + queryTag);
+
 		String searchCDATAstart = new String("<![CDATA[").toLowerCase();
 		String searchCDATAend = new String("]]>");
 		int startPosCDATA = queryTag.toLowerCase().indexOf(searchCDATAstart) + searchCDATAstart.length();
 		int stopPosCDATA = queryTag.indexOf(searchCDATAend, startPosCDATA);
 		String cdataQueryTag = queryTag.substring(startPosCDATA, stopPosCDATA);
-		
-		//System.out.println("\nCDATA ("+ (i++) +") :  start="+startPosCDATA+" / stop="+stopPosCDATA);
-		System.out.println("CDATA found :  " + cdataQueryTag);
-		
+
+		// System.out.println("\nCDATA ("+ (i++) +") : start="+startPosCDATA+" /
+		// stop="+stopPosCDATA);
+		System.out.println("CDATA in queryTag found :  " + cdataQueryTag);
+
 		boolean sqlParamPresentInCDATA = cdataQueryTag.equals("$P!{sql}");
-		//System.out.println("$P!{sql} = " + sqlParamPresentInCDATA);
-		
+		// System.out.println("$P!{sql} = " + sqlParamPresentInCDATA);
+
+		// PARAM sql present PARAM sql has default ("") & sqlParamPresentInCDATA
+		if (sqlParamPresent && sqlParamHasDefault && sqlParamPresentInCDATA) {
+			// nothing to do
+			return null;
+		}
+
 		// NEW SQL PARAM
 		StringBuilder newSQlParam = new StringBuilder();
-		newSQlParam.append("<parameter name=\"sql\" class=\"java.lang.String\" isForPrompting=\"false\">" + CharValues.CRLF);
+		newSQlParam.append(
+				"<parameter name=\"sql\" class=\"java.lang.String\" isForPrompting=\"false\">" + CharValues.CRLF);
 		newSQlParam.append("<defaultValueExpression><![CDATA[\"");
 		if (cdataQueryTag.length() > 0 && !sqlParamPresentInCDATA) {
 			newSQlParam.append(convertStringToOneLine(cdataQueryTag));
-		} 
+		} else {
+			newSQlParam.append("SELECT 1 as test");
+		}
 		newSQlParam.append("\"]]></defaultValueExpression>" + CharValues.CRLF);
 		newSQlParam.append("</parameter>" + CharValues.CRLF);
-		
+
 		// GENERATE CORRECT JASPER REPORT
-		
+
 		StringBuilder bxml = new StringBuilder();
-		
+
 		// sql param
 		if (sqlParamPresent) {
 			bxml.append(xml.substring(0, startPosSqlParam));
@@ -149,7 +180,7 @@ public class SQLupdater {
 			bxml.append(xml.substring(0, startPosQueryTag));
 			bxml.append(newSQlParam);
 		}
-		
+
 		// <queryString>
 		bxml.append("<queryString>" + CharValues.CRLF);
 		bxml.append("<![CDATA[$P!{sql}]]>" + CharValues.CRLF);
@@ -157,19 +188,21 @@ public class SQLupdater {
 
 		// xml after </queryString>
 		bxml.append(xml.substring(stopPosQueryTag));
-		
+
 		return bxml.toString();
-		
+
 	}
-	
+
 	private static String convertStringToOneLine(String str) {
-		
+
 		if (str == null) {
 			return "";
 		}
-		
+
+		str = str.replaceAll("\"", "'");
 		str = str.replaceAll("\\n", " ");
 		str = str.replaceAll("\\r", " ");
+		str = str.replaceAll("\\t", " ");
 		int strLength = str.length();
 		int afterReplaceLength = 0;
 		while (strLength != afterReplaceLength) {
@@ -177,9 +210,9 @@ public class SQLupdater {
 			str = str.replaceAll("  ", " ");
 			afterReplaceLength = str.length();
 		}
-		
+
 		return str;
-		
+
 	}
 
 }

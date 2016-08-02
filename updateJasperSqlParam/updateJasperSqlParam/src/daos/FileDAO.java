@@ -21,6 +21,8 @@ import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 
 import enums.CharValues;
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JasperCompileManager;
 import updateJasperSqlParam.SQLupdater;
 
 public class FileDAO {
@@ -30,28 +32,30 @@ public class FileDAO {
 	public FileDAO() {
 	}
 
-	public static Set<String> scanStructure(String ext, boolean includeSubDir, boolean consoleOutput) throws RuntimeException {
+	public static Set<String> scanStructure(String ext, boolean includeSubDir, boolean consoleOutput)
+			throws RuntimeException {
 
 		try {
 
 			/*
-			JOptionPane.showMessageDialog(null, "logPath = " + SQLupdater.logPathAndFilename + CharValues.CRLF , "Info",
-					JOptionPane.INFORMATION_MESSAGE);
-			*/
-			
+			 * JOptionPane.showMessageDialog(null, "logPath = " +
+			 * SQLupdater.logPathAndFilename + CharValues.CRLF , "Info",
+			 * JOptionPane.INFORMATION_MESSAGE);
+			 */
+
 			File dir = new File("");
 			if (dir.getName().startsWith(".", 0)) {
 				return null;
 			}
-			
+
 			IOFileFilter includeSubDirDFF = null;
 			if (includeSubDir) {
 				includeSubDirDFF = DirectoryFileFilter.DIRECTORY;
 			}
 
 			Set<String> absFiles = new HashSet<>();
-			Collection<File> files = FileUtils.listFiles(new File(SQLupdater.currentRelativePath), TrueFileFilter.INSTANCE, includeSubDirDFF
-					);
+			Collection<File> files = FileUtils.listFiles(new File(SQLupdater.currentRelativePath),
+					TrueFileFilter.INSTANCE, includeSubDirDFF);
 			for (File file : files) {
 				if (file.getAbsolutePath().contains("\\.")) {
 					continue;
@@ -59,7 +63,7 @@ public class FileDAO {
 				if (file.isDirectory() && !file.equals(dir)) {
 					continue;
 				}
-				if (!file.isDirectory() && Pattern.matches(".+\\."+ext+"$", file.getName().toLowerCase())) {
+				if (!file.isDirectory() && Pattern.matches(".+\\." + ext + "$", file.getName().toLowerCase())) {
 					int lenghtNoExt = file.getAbsolutePath().lastIndexOf('.');
 					absFiles.add(file.getAbsolutePath().substring(0, lenghtNoExt));
 				}
@@ -67,7 +71,7 @@ public class FileDAO {
 			if (consoleOutput) {
 				System.out.println("Scanned [" + SQLupdater.currentRelativePath + "] = " + absFiles.size());
 			}
-			
+
 			return absFiles;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -95,7 +99,7 @@ public class FileDAO {
 			}
 		}
 		builder.append(CharValues.CRLF);
-		builder.append("ALTERED : " + correct + CharValues.CRLF);
+		builder.append("CHECKED (and if necessary updated) : " + correct + CharValues.CRLF);
 		for (Entry<String, String> entry : log.entrySet()) {
 			if (entry.getValue().length() == 0) {
 				builder.append(entry.getKey() + CharValues.CRLF);
@@ -104,10 +108,10 @@ public class FileDAO {
 
 		try {
 			/*
-			if (Files.exists(Paths.get(logPathAndFilename))) {
-				throw new RuntimeException("File [" + logPathAndFilename + "] already exists !\n");
-			}
-			*/
+			 * if (Files.exists(Paths.get(logPathAndFilename))) { throw new
+			 * RuntimeException("File [" + logPathAndFilename +
+			 * "] already exists !\n"); }
+			 */
 			Files.write(Paths.get(logPathAndFilename), builder.toString().getBytes("utf-8"), StandardOpenOption.APPEND);
 			System.out.println("\nLog :  " + logPathAndFilename);
 		} catch (IOException e) {
@@ -116,84 +120,110 @@ public class FileDAO {
 	}
 
 	public static void createBuFolders() throws RuntimeException {
-		
+
 		Date date = new Date();
 		String backupPath = SQLupdater.backupPathMain + "\\BU_" + Long.toString(date.getTime());
 		try {
 			if (!new File(backupPath).mkdirs()) {
 				throw new RuntimeException("Unable to create directory " + backupPath);
-			};
+			}
+			;
 			SQLupdater.backupPathUsed = backupPath;
-			String logInfo = "Created backup folder (original files can be found here)" + CharValues.CRLF + SQLupdater.backupPathUsed + CharValues.CRLF + CharValues.CRLF;
-			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+			String logInfo = "Created backup folder (original files can be found here)" + CharValues.CRLF
+					+ SQLupdater.backupPathUsed + CharValues.CRLF + CharValues.CRLF;
+			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE,
+					StandardOpenOption.APPEND);
 		} catch (SecurityException e) {
 			throw new RuntimeException(e);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		
+
 	}
-	
+
 	public static void moveFilesToBackupFolder(String ext) throws RuntimeException {
-		
+
 		Set<String> filesToMove = new HashSet<>();
 		try {
 			filesToMove.addAll(FileDAO.scanStructure(ext, false, false));
-			
+
 			for (String sFile : filesToMove) {
 				File file = new File(sFile + "." + ext);
-				//System.out.println("file to move : "+ file.getAbsolutePath());
+				// System.out.println("file to move : "+
+				// file.getAbsolutePath());
 				String moveToFileName = SQLupdater.backupPathUsed + "\\" + file.getName();
 				if (!file.renameTo(new File(moveToFileName))) {
 					throw new RuntimeException("Unable to move file " + file.getAbsolutePath() + " to backup folder !");
 				}
-				
+
 			}
-			
+
 			if (filesToMove.size() > 0) {
-				String logInfo = "INFO :  MOVED *.jrxml files to backup folder (" + filesToMove.size() + ")" + CharValues.CRLF + CharValues.CRLF;
+				String logInfo = "INFO :  MOVED *.jrxml files to backup folder (" + filesToMove.size() + ")"
+						+ CharValues.CRLF + CharValues.CRLF;
 				System.out.println(logInfo);
-				Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-				
+				Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"),
+						StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
 			}
 			return;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		
+
 	}
-	
-public static void copyFilesToBackupFolder(String ext) throws RuntimeException {
-		
+
+	public static void copyFilesToBackupFolder(String ext) throws RuntimeException {
+
 		Set<String> filesToCopy = new HashSet<>();
 		try {
 			filesToCopy.addAll(FileDAO.scanStructure(ext, false, false));
-			
+
 			for (String sFile : filesToCopy) {
-				
+
 				File sourcheFile = new File(sFile + "." + ext);
 				Path sourcePath = Paths.get(sourcheFile.toURI());
-				//System.out.println("file to copy : "+ sourcheFile.getAbsolutePath());
+				// System.out.println("file to copy : "+
+				// sourcheFile.getAbsolutePath());
 				File destFile = new File(SQLupdater.backupPathUsed);
 				Path destPath = Paths.get(destFile.toURI());
-				boolean failure = Files.copy(sourcePath, destPath.resolve(sourcePath.getFileName()), StandardCopyOption.COPY_ATTRIBUTES) == null;
+				boolean failure = Files.copy(sourcePath, destPath.resolve(sourcePath.getFileName()),
+						StandardCopyOption.COPY_ATTRIBUTES) == null;
 				if (failure) {
-					throw new RuntimeException("Unable to copy file " + sourcheFile.getAbsolutePath() + " to backup folder !");
+					throw new RuntimeException(
+							"Unable to copy file " + sourcheFile.getAbsolutePath() + " to backup folder !");
 				}
-				
+
 			}
-			
+
 			if (filesToCopy.size() > 0) {
-				String logInfo = "INFO :  COPIED *.jasper files to backup folder (" + filesToCopy.size() + ")" + CharValues.CRLF + CharValues.CRLF;
+				String logInfo = "INFO :  COPIED *.jasper files to backup folder (" + filesToCopy.size() + ")"
+						+ CharValues.CRLF + CharValues.CRLF;
 				System.out.println(logInfo);
-				Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-				
+				Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"),
+						StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
 			}
 			return;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		
+
 	}
-	
+
+	public static void writeJasper(String pathAndFilenameNoExt) throws RuntimeException {
+
+		String jrxmlFilename = pathAndFilenameNoExt + ".jrxml";
+		String jasperFilename = pathAndFilenameNoExt + ".jasper";
+		
+		try {
+			JasperCompileManager.compileReport(jrxmlFilename);
+			JasperCompileManager.compileReportToFile(jrxmlFilename, jasperFilename);
+			// no exception = succes ; delete jrxml
+			Files.delete(Paths.get(jrxmlFilename));
+		} catch (JRException | IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 }
