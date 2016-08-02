@@ -222,6 +222,16 @@ public class FileDAO {
 			// no exception = succes ; delete jrxml
 			Files.delete(Paths.get(jrxmlFilename));
 		} catch (JRException | IOException e) {
+			String logInfo = CharValues.CRLF +  "PROGRAM TERMINATED due to problem compiling " + jrxmlFilename  + CharValues.CRLF;
+			logInfo += e.toString();
+			try {
+				Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE,
+						StandardOpenOption.APPEND);
+			} catch (IOException errorWritingLog) {
+				// TODO Auto-generated catch block
+				errorWritingLog.printStackTrace();
+				throw new RuntimeException(errorWritingLog);
+			}
 			throw new RuntimeException(e);
 		}
 	}

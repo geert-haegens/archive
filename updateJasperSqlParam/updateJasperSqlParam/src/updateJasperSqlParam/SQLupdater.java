@@ -24,7 +24,9 @@ public class SQLupdater {
 
 	// TODO : juiste pad in commentaar zetten !
 	private static final Path userPath = Paths.get("").toAbsolutePath();
+	
 	// private static final Path userPath = Paths.get("d:\\geert\\temp\\jasperfiles").toAbsolutePath();
+	// private static final Path userPath = Paths.get("C:\\DEV\\Servoy7\\application_server\\server\\webapps\\ROOT\\uploads\\reports").toAbsolutePath();
 
 	public static final String currentRelativePath = userPath.toString();
 	public static final String logPathAndFilename = currentRelativePath + "\\jasperSQLupdater.log";
