@@ -1,5 +1,9 @@
 package updateJasperSqlParam;
 
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -12,6 +16,22 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.swing.JOptionPane;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.TransformerFactoryConfigurationError;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import com.google.common.base.Throwables;
 
@@ -22,6 +42,8 @@ import net.sf.jasperreports.engine.JRChild;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRExpressionChunk;
 import net.sf.jasperreports.engine.JRParameter;
+import net.sf.jasperreports.engine.JRQuery;
+import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.engine.base.JRBaseSubreport;
 import net.sf.jasperreports.engine.util.JRLoader;
@@ -29,8 +51,8 @@ import net.sf.jasperreports.engine.util.JRLoader;
 public class SQLupdater {
 
 	// TODO : juiste pad in commentaar zetten !
-	//private static final Path userPath = Paths.get("").toAbsolutePath();
-	
+	// private static final Path userPath = Paths.get("").toAbsolutePath();
+
 	private static final Path userPath = Paths.get("D:\\Geert\\PROJECTEN\\JASPER_project\\jasperfiles").toAbsolutePath();
 	// private static final Path userPath = Paths.get("C:\\DEV\\Servoy7\\application_server\\server\\webapps\\ROOT\\uploads\\reports").toAbsolutePath();
 
@@ -39,6 +61,7 @@ public class SQLupdater {
 	public static final String backupPathMain = currentRelativePath + "\\BU_jasperSQLupdater";
 	public static String backupPathUsed = backupPathMain;
 	public static Map<String, String> log = new HashMap<>();
+	private static Set<String> jasperSubFilesNoExt;
 
 	public static void main(String[] args) {
 
@@ -54,22 +77,47 @@ public class SQLupdater {
 			FileDAO.copyFilesToBackupFolder("jasper");
 
 			Set<String> jasperFilesNoExt = FileDAO.scanStructure("jasper", false, true);
-			Set<String> jasperSubFilesNoExt = getSubReportNamesNoExt(jasperFilesNoExt);
-			
+			jasperSubFilesNoExt = getSubReportNamesNoExt(jasperFilesNoExt);
 
-
-			/*
 			for (String pathAndFilenameNoExt : jasperFilesNoExt) {
+
+				if (isSubReport(pathAndFilenameNoExt)) {
+					// skip
+					continue;
+				}
 
 				try {
 					String jasperFilename = pathAndFilenameNoExt + ".jasper";
 					JasperReport report = (JasperReport) JRLoader.loadObjectFromFile(jasperFilename);
-					// JRXmlWriter.writeReport(report, pathAndFilenameNoExt +
-					// ".jrxml", "UTF-8");
-					String xmlStr = JasperCompileManager.writeReportToXml(report);
+					boolean sqlParamPresent = false;
 					System.out.println("\n****************\nfile = " + pathAndFilenameNoExt + ".jasper");
 
-					String xmlModif = normaliseJRxml(xmlStr);
+					// CHECK PARAM sql
+					JRParameter parameters[] = report.getParameters();
+					for (JRParameter parameter : parameters) {
+						if (parameter.getName().equals("sql")) {
+							sqlParamPresent = true;
+							break;
+						}
+					}
+					System.out.println("sqlParamPresent = " + sqlParamPresent);
+
+					// CHECK query
+
+					JRQuery query = report.getQuery();
+					String queryText = query.getText();
+					boolean queryIsPsql = queryText.equals("$P!{sql}");
+					System.out.println("query equals $P!{sql} = " + queryIsPsql);
+
+					if (sqlParamPresent && queryIsPsql) {
+						System.out.println("NO MODIF :  " + pathAndFilenameNoExt + ".jasper");
+						continue;
+					}
+
+					// MODIFY report
+
+					String xmlModif = modifyJRxml(report, sqlParamPresent, queryIsPsql);
+
 					if (xmlModif == null) {
 						System.out.println("NO MODIF :  " + pathAndFilenameNoExt + ".jasper\n");
 					} else {
@@ -88,8 +136,8 @@ public class SQLupdater {
 					log.put(pathAndFilenameNoExt + ".jasper",
 							CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
 				}
+
 			}
-			*/
 
 			FileDAO.writeLog(logPathAndFilename, log);
 			System.out.println("Files have been altered for correct $SQL param.");
@@ -104,133 +152,74 @@ public class SQLupdater {
 
 	static int i = 1;
 
-	private static String normaliseJRxml(String xml) throws RuntimeException {
+	private static String modifyJRxml(JasperReport report, boolean sqlParamPresent, boolean queryIsPsql)
+			throws RuntimeException {
 
-		String xmlLC = xml.toLowerCase();
+		String xmlStr = JasperCompileManager.writeReportToXml(report);
+		Document xml = null;
 
-		String searchSqlParam = new String("<parameter name=\"sql\"");
-		String searchCloseTag = new String("/>");
-		int startPosSqlParam = xmlLC.indexOf(searchSqlParam);
-		int stopPosSqlParam = -1;
-		String sqlParam = "";
-		boolean sqlParamHasDefault = false;
-		if (startPosSqlParam >= 0) {
-			stopPosSqlParam = xml.indexOf(searchCloseTag, startPosSqlParam) + searchCloseTag.length();
-			sqlParam = xml.substring(startPosSqlParam, stopPosSqlParam);
-			// "/>" was not the endtag, </parameter> is :
-			searchCloseTag = new String("</parameter>");
-			if (sqlParam.toLowerCase().indexOf(searchCloseTag) >= 0) {
-				stopPosSqlParam = xml.indexOf(searchCloseTag, startPosSqlParam) + searchCloseTag.length();
-				sqlParamHasDefault = true;
-			}
+		// CONVERT string to XML doc
+		try {
+			DocumentBuilderFactory fctr = DocumentBuilderFactory.newInstance();
+			DocumentBuilder bldr = fctr.newDocumentBuilder();
+			InputSource insrc = new InputSource(new StringReader(xmlStr));
+			xml = bldr.parse(insrc);
+		} catch (ParserConfigurationException e) {
+			throw new RuntimeException(e);
+		} catch (SAXException | IOException e) {
+			throw new RuntimeException(e);
 		}
 
-		boolean sqlParamPresent = (startPosSqlParam > 0 && stopPosSqlParam > startPosSqlParam);
+		Element root = xml.getDocumentElement();
+
+		Node query = xml.getElementsByTagName("queryString").item(0);
+		if (!queryIsPsql) {
+			query.setTextContent("$P!{sql}");
+		}
+
 		if (!sqlParamPresent) {
-			System.out.println("sqlParam not found :  start=" + startPosSqlParam + " / stop=" + stopPosSqlParam);
-		} else {
-			System.out.println("sqlParam found :  " + sqlParam);
-		}
-		
-		
+			Element sqlParam = xml.createElement("parameter");
+			sqlParam.setAttribute("name", "sql");
+			sqlParam.setAttribute("class", "java.lang.String");
+			sqlParam.setAttribute("isForPrompting", "false");
 
-		String searchQueryStart = new String("<queryString").toLowerCase();
-		String searchQueryEnd = new String("</queryString>").toLowerCase();
-		int startPosQueryTag = xmlLC.indexOf(searchQueryStart);
-		int stopPosQueryTag = xmlLC.indexOf(searchQueryEnd, startPosQueryTag) + searchQueryEnd.length();
-		if (startPosQueryTag < 0 || stopPosQueryTag < 0) {
-			throw new RuntimeException("No tag <queryString> not found in file");
-		}
-		String queryTag = xml.substring(startPosQueryTag, stopPosQueryTag);
+			Element parameterDescription = xml.createElement("parameterDescription");
+			Node cdataPD = xml.createCDATASection("generated by jasperSQLupdater");
+			parameterDescription.appendChild(cdataPD);
+			sqlParam.appendChild(parameterDescription);
 
-		// System.out.println("\nqueryString ("+ (i++) +") :
-		// start="+startPosQueryTag+" / stop="+stopPosQueryTag);
-		// System.out.println("queryString found : " + queryTag);
+			Element defaultValueExpression = xml.createElement("defaultValueExpression");
+			Node cdataDVE = xml.createCDATASection("\"SELECT 1 as test\"");
+			defaultValueExpression.appendChild(cdataDVE);
+			sqlParam.appendChild(defaultValueExpression);
 
-		String searchCDATAstart = new String("<![CDATA[").toLowerCase();
-		String searchCDATAend = new String("]]>");
-		int startPosCDATA = queryTag.toLowerCase().indexOf(searchCDATAstart) + searchCDATAstart.length();
-		int stopPosCDATA = queryTag.indexOf(searchCDATAend, startPosCDATA);
-		String cdataQueryTag = queryTag.substring(startPosCDATA, stopPosCDATA);
-
-		// System.out.println("\nCDATA ("+ (i++) +") : start="+startPosCDATA+" /
-		// stop="+stopPosCDATA);
-		System.out.println("CDATA in queryTag found :  " + cdataQueryTag);
-
-		boolean sqlParamPresentInCDATA = cdataQueryTag.equals("$P!{sql}");
-		// System.out.println("$P!{sql} = " + sqlParamPresentInCDATA);
-
-		// PARAM sql present PARAM sql has default ("") & sqlParamPresentInCDATA
-		if (sqlParamPresent && sqlParamHasDefault && sqlParamPresentInCDATA) {
-			// nothing to do
-			return null;
+			root.insertBefore(sqlParam, query);
 		}
 
-		// NEW SQL PARAM
-		StringBuilder newSQlParam = new StringBuilder();
-		newSQlParam.append(
-				"<parameter name=\"sql\" class=\"java.lang.String\" isForPrompting=\"false\">" + CharValues.CRLF);
-		newSQlParam.append("<defaultValueExpression><![CDATA[\"");
-		if (cdataQueryTag.length() > 0 && !sqlParamPresentInCDATA) {
-			newSQlParam.append(convertStringToOneLine(cdataQueryTag));
-		} else {
-			newSQlParam.append("SELECT 1 as test");
+		// CONVERT XML doc to string
+		StringWriter sw = new StringWriter();
+		try {
+			DOMSource domSource = new DOMSource(xml);
+			Transformer transformer;
+
+			transformer = TransformerFactory.newInstance().newTransformer();
+
+			StreamResult sr = new StreamResult(sw);
+			transformer.transform(domSource, sr);
+
+		} catch (TransformerConfigurationException | TransformerFactoryConfigurationError e) {
+			throw new RuntimeException(e);
+		} catch (TransformerException e) {
+			throw new RuntimeException(e);
 		}
-		newSQlParam.append("\"]]></defaultValueExpression>" + CharValues.CRLF);
-		newSQlParam.append("</parameter>" + CharValues.CRLF);
-
-		// GENERATE CORRECT JASPER REPORT
-
-		StringBuilder bxml = new StringBuilder();
-
-		// sql param
-		if (sqlParamPresent) {
-			bxml.append(xml.substring(0, startPosSqlParam));
-			bxml.append(newSQlParam);
-			bxml.append(xml.substring(stopPosSqlParam, startPosQueryTag));
-		} else {
-			bxml.append(xml.substring(0, startPosQueryTag));
-			bxml.append(newSQlParam);
-		}
-
-		// <queryString>
-		bxml.append("<queryString>" + CharValues.CRLF);
-		bxml.append("<![CDATA[$P!{sql}]]>" + CharValues.CRLF);
-		bxml.append("</queryString>" + CharValues.CRLF);
-
-		// xml after </queryString>
-		bxml.append(xml.substring(stopPosQueryTag));
-
-		return bxml.toString();
+		return sw.toString();
 
 	}
 
-	private static String convertStringToOneLine(String str) {
+	private static Set<String> getSubReportNamesNoExt(Set<String> jasperFilesNoExt) throws RuntimeException {
 
-		if (str == null) {
-			return "";
-		}
-
-		str = str.replaceAll("\"", "'");
-		str = str.replaceAll("\\n", " ");
-		str = str.replaceAll("\\r", " ");
-		str = str.replaceAll("\\t", " ");
-		int strLength = str.length();
-		int afterReplaceLength = 0;
-		while (strLength != afterReplaceLength) {
-			strLength = str.length();
-			str = str.replaceAll("  ", " ");
-			afterReplaceLength = str.length();
-		}
-
-		return str;
-
-	}
-	
-	private static Set<String> getSubReportNamesNoExt(Set<String> jasperFilesNoExt) {
-		
 		Set<String> jasperSubFilesNoExt = new HashSet<>();
-		
+
 		// MAIN REPORT OR SUB REPORT ?
 		for (String pathAndFilenameNoExt : jasperFilesNoExt) {
 
@@ -240,37 +229,50 @@ public class SQLupdater {
 				JRParameter parameters[] = report.getParameters();
 				for (JRParameter parameter : parameters) {
 					if (parameter.getName().equalsIgnoreCase("SUBREPORT_DIR")) {
-						
+
 						JRBand bands[] = report.getAllBands();
 						for (JRBand band : bands) {
 							List<JRChild> elements = band.getChildren();
 							for (JRChild child : elements) {
-							    if (child instanceof JRBaseSubreport){
-							        JRBaseSubreport subreport = (JRBaseSubreport) child;
-							        String expression= ""; //Lets find out the expression used
-							        JRExpressionChunk[] chunks = subreport.getExpression().getChunks();
-							        for (JRExpressionChunk c : chunks) {
-							            expression += c.getText();
-							        }
-							        int subReportStartPos = expression.indexOf("\"");
-							        int subReportEndPos = expression.toLowerCase().indexOf(".jasper");
-							        if (subReportStartPos > -1 && subReportEndPos > subReportStartPos) {
-							        	String subReportNameNoExt = expression.substring(subReportStartPos + 1, subReportEndPos);
-							        	jasperSubFilesNoExt.add(subReportNameNoExt);
-							        	System.out.println(pathAndFilenameNoExt + ": " + subReportNameNoExt); 
-							        } else {
-							        	System.err.println(pathAndFilenameNoExt + ": " + expression); 
-							        }
-							        
-							        
-							    }
+								if (child instanceof JRBaseSubreport) {
+									JRBaseSubreport subreport = (JRBaseSubreport) child;
+									String expression = ""; // Lets find out the
+															// expression used
+									JRExpressionChunk[] chunks = subreport.getExpression().getChunks();
+									for (JRExpressionChunk c : chunks) {
+										expression += c.getText();
+									}
+									int subReportStartPos = expression.indexOf("\"");
+									int subReportEndPos = expression.toLowerCase().indexOf(".jasper");
+									if (subReportStartPos > -1 && subReportEndPos > subReportStartPos) {
+										String subReportNameNoExt = expression.substring(subReportStartPos + 1,
+												subReportEndPos);
+										jasperSubFilesNoExt.add(subReportNameNoExt);
+										// System.out.println(pathAndFilenameNoExt
+										// + ": " + subReportNameNoExt);
+									} else {
+										System.err.println(pathAndFilenameNoExt + ": " + expression);
+										StringBuilder error = new StringBuilder();
+										error.append("PROGRAM TERMINATED" + CharValues.CRLF);
+										error.append("File :  " + pathAndFilenameNoExt + ".jasper" + CharValues.CRLF);
+										error.append("Unable to detect subreport references :  " + expression + CharValues.CRLF);
+										error.append(CharValues.CRLF);
+										error.append("Please temporarily remove file and its subreports from folder" + CharValues.CRLF);
+										error.append("and manually modify the main report." + CharValues.CRLF);
+										log.put(pathAndFilenameNoExt + ".jasper", error.toString() + CharValues.CRLF);
+										throw new RuntimeException(error.toString());
+									}
+
+								}
 							}
 						}
-						
+
 					}
-					//System.out.println(pathAndFilenameNoExt + ": " + parameter.getName() + " = " + parameter.getDefaultValueExpression().getText());
+					// System.out.println(pathAndFilenameNoExt + ": " +
+					// parameter.getName() + " = " +
+					// parameter.getDefaultValueExpression().getText());
 				}
-				
+
 			} catch (NoClassDefFoundError ex) {
 				log.put(pathAndFilenameNoExt + ".jasper",
 						CharValues.CRLF + Throwables.getStackTraceAsString(ex) + CharValues.CRLF);
@@ -279,7 +281,31 @@ public class SQLupdater {
 						CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
 			}
 		}
+
+		try {
+			StringBuilder logInfo = new StringBuilder();
+			logInfo.append(CharValues.CRLF + "SUB REPORTS ( = non modified )" + CharValues.CRLF + CharValues.CRLF);
+			for (String jasperSubFileNoExt : jasperSubFilesNoExt) {
+				logInfo.append(jasperSubFileNoExt + ".jasper" + CharValues.CRLF);
+			}
+			logInfo.append(CharValues.CRLF);
+			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.toString().getBytes("utf-8"),
+					StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException(e);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+
 		return jasperSubFilesNoExt;
+	}
+
+	private static boolean isSubReport(String pathAndFilenameNoExt) {
+
+		int start = pathAndFilenameNoExt.lastIndexOf("\\");
+		String filenameNoExt = pathAndFilenameNoExt.substring(start + 1);
+		return jasperSubFilesNoExt.contains(filenameNoExt);
+
 	}
 
 }
