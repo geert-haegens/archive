@@ -51,9 +51,9 @@ import net.sf.jasperreports.engine.util.JRLoader;
 public class SQLupdater {
 
 	// TODO : juiste pad in commentaar zetten !
-	// private static final Path userPath = Paths.get("").toAbsolutePath();
+	private static final Path userPath = Paths.get("").toAbsolutePath();
 
-	private static final Path userPath = Paths.get("D:\\Geert\\PROJECTEN\\JASPER_project\\jasperfiles").toAbsolutePath();
+	// private static final Path userPath = Paths.get("D:\\Geert\\PROJECTEN\\JASPER_project\\jasperfiles").toAbsolutePath();
 	// private static final Path userPath = Paths.get("C:\\DEV\\Servoy7\\application_server\\server\\webapps\\ROOT\\uploads\\reports").toAbsolutePath();
 
 	public static final String currentRelativePath = userPath.toString();
@@ -253,6 +253,8 @@ public class SQLupdater {
 									} else {
 										System.err.println(pathAndFilenameNoExt + ": " + expression);
 										StringBuilder error = new StringBuilder();
+										error.append(CharValues.CRLF);
+										error.append(CharValues.CRLF);
 										error.append("PROGRAM TERMINATED" + CharValues.CRLF);
 										error.append("File :  " + pathAndFilenameNoExt + ".jasper" + CharValues.CRLF);
 										error.append("Unable to detect subreport references :  " + expression + CharValues.CRLF);
