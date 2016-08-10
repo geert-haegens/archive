@@ -1,5 +1,6 @@
 package updateJasperSqlParam;
 
+import java.awt.Dimension;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -67,13 +69,38 @@ public class SQLupdater {
 
 		try {
 
+			/*
+			final JFrame frame1 = new JFrame("SQL updater");
+	        frame1.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	        frame1.setSize(100, 100);
+	        frame1.setLocation(100, 100);
+
+	        JLabel title = new JLabel("Processing :");
+	        frame1.getContentPane().add(title);
+	        */
+	        JOptionPane pane = new JOptionPane("Processing :", JOptionPane.INFORMATION_MESSAGE, JOptionPane.DEFAULT_OPTION, null, new Object[]{}, null);
+	        pane.setSize(750, 100);
+	        pane.setMinimumSize(new Dimension(750, 100));
+	        pane.setPreferredSize(new Dimension(750, 100));
+            JDialog dialog = pane.createDialog(null, "SQL updater");
+            //pane.setMessage("new message");
+            dialog.setModal(false);
+            dialog.setResizable(true);
+            dialog.setMinimumSize(new Dimension(750, 100));
+            dialog.setPreferredSize(new Dimension(750, 100));
+            dialog.setVisible(true);
+            dialog.setAlwaysOnTop(true);
+	        
 			String logInfo = "STARTING LOG" + CharValues.CRLF + new Date().toString() + CharValues.CRLF
 					+ CharValues.CRLF;
 			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE,
 					StandardOpenOption.APPEND);
 
+			pane.setMessage("createBuFolders");
 			FileDAO.createBuFolders();
+			pane.setMessage("move *.jrxml files to BU folder");
 			FileDAO.moveFilesToBackupFolder("jrxml");
+			pane.setMessage("copy *.jasper files to BU folder");
 			FileDAO.copyFilesToBackupFolder("jasper");
 
 			Set<String> jasperFilesNoExt = FileDAO.scanStructure("jasper", false, true);
@@ -91,6 +118,8 @@ public class SQLupdater {
 					JasperReport report = (JasperReport) JRLoader.loadObjectFromFile(jasperFilename);
 					boolean sqlParamPresent = false;
 					System.out.println("\n****************\nfile = " + pathAndFilenameNoExt + ".jasper");
+					pane.setMessage("Processing :\n" + pathAndFilenameNoExt + ".jasper");
+					
 
 					// CHECK PARAM sql
 					JRParameter parameters[] = report.getParameters();
@@ -108,9 +137,10 @@ public class SQLupdater {
 					String queryText = query.getText();
 					boolean queryIsPsql = queryText.equals("$P!{sql}");
 					System.out.println("query equals $P!{sql} = " + queryIsPsql);
-
+					
 					if (sqlParamPresent && queryIsPsql) {
 						System.out.println("NO MODIF :  " + pathAndFilenameNoExt + ".jasper");
+						log.put(pathAndFilenameNoExt + ".jasper", "NO MODIF");
 						continue;
 					}
 
@@ -120,12 +150,14 @@ public class SQLupdater {
 
 					if (xmlModif == null) {
 						System.out.println("NO MODIF :  " + pathAndFilenameNoExt + ".jasper\n");
+						log.put(pathAndFilenameNoExt + ".jasper", "NO MODIF");
 					} else {
 						String jrxmlFilename = pathAndFilenameNoExt + ".jrxml";
 						Files.write(Paths.get(jrxmlFilename), xmlModif.getBytes("utf-8"), StandardOpenOption.CREATE,
 								StandardOpenOption.WRITE);
 						FileDAO.writeJasper(pathAndFilenameNoExt);
 						System.out.println("MODIFIED :  " + jasperFilename);
+						log.put(pathAndFilenameNoExt + ".jasper", "MODIFIED");
 					}
 
 					log.put(pathAndFilenameNoExt + ".jasper", "");
@@ -141,6 +173,7 @@ public class SQLupdater {
 
 			FileDAO.writeLog(logPathAndFilename, log);
 			System.out.println("Files have been altered for correct $SQL param.");
+			System.exit(0);
 
 		} catch (Exception e) {
 			JOptionPane.showMessageDialog(null,
@@ -309,5 +342,7 @@ public class SQLupdater {
 		return jasperSubFilesNoExt.contains(filenameNoExt);
 
 	}
+	
+	
 
 }

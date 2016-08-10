@@ -84,7 +84,7 @@ public class FileDAO {
 		int errors = 0;
 		int correct = 0;
 		for (Entry<String, String> entry : log.entrySet()) {
-			if (entry.getValue().length() == 0) {
+			if (entry.getValue().length() == 0 || entry.getValue().equals("NO MODIF")) {
 				correct++;
 			} else {
 				errors++;
@@ -94,15 +94,15 @@ public class FileDAO {
 		StringBuilder builder = new StringBuilder();
 		builder.append("ERRORS : " + errors + CharValues.CRLF);
 		for (Entry<String, String> entry : log.entrySet()) {
-			if (entry.getValue().length() > 0) {
+			if (entry.getValue().length() > 0 && !entry.getValue().equals("NO MODIF")) {
 				builder.append(entry.getKey()).append(": ").append(entry.getValue()).append(CharValues.CRLF);
 			}
 		}
 		builder.append(CharValues.CRLF);
 		builder.append("CHECKED (and if necessary updated) : " + correct + CharValues.CRLF);
 		for (Entry<String, String> entry : log.entrySet()) {
-			if (entry.getValue().length() == 0) {
-				builder.append(entry.getKey() + CharValues.CRLF);
+			if (entry.getValue().length() == 0 || entry.getValue().equals("NO MODIF")) {
+				builder.append(entry.getKey()).append(": ").append(entry.getValue()).append(CharValues.CRLF);
 			}
 		}
 
