@@ -29,6 +29,7 @@ import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -57,7 +58,8 @@ public class SQLupdater {
 
 	// private static final Path userPath = Paths.get("D:\\Geert\\PROJECTEN\\JASPER_project\\jasperfiles").toAbsolutePath();
 	// private static final Path userPath = Paths.get("C:\\DEV\\Servoy7\\application_server\\server\\webapps\\ROOT\\uploads\\reports").toAbsolutePath();
-
+	//private static final Path userPath = Paths.get("D:\\magWeg\\demo\\debug").toAbsolutePath();
+	
 	public static final String currentRelativePath = userPath.toString();
 	public static final String logPathAndFilename = currentRelativePath + "\\jasperSQLupdater.log";
 	public static final String backupPathMain = currentRelativePath + "\\BU_jasperSQLupdater";
@@ -176,6 +178,8 @@ public class SQLupdater {
 			System.exit(0);
 
 		} catch (Exception e) {
+			log.put("UNKNOWN.jasper",
+					CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
 			JOptionPane.showMessageDialog(null,
 					"logPath" + logPathAndFilename + CharValues.CRLF + Throwables.getStackTraceAsString(e), "Error",
 					JOptionPane.ERROR_MESSAGE);
@@ -226,7 +230,13 @@ public class SQLupdater {
 			defaultValueExpression.appendChild(cdataDVE);
 			sqlParam.appendChild(defaultValueExpression);
 
-			root.insertBefore(sqlParam, query);
+			try {
+				root.insertBefore(sqlParam, query);
+			} catch(DOMException ex) {
+				System.out.println(ex.toString());
+				throw new RuntimeException("UNEXPECTED EXCEPTION while generating XML\n" + ex.toString());
+			}
+			
 		}
 
 		// CONVERT XML doc to string
