@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,10 +57,12 @@ public class SQLupdater {
 	// TODO : juiste pad in commentaar zetten !
 	private static final Path userPath = Paths.get("").toAbsolutePath();
 
-	// private static final Path userPath = Paths.get("D:\\Geert\\PROJECTEN\\JASPER_project\\jasperfiles").toAbsolutePath();
-	// private static final Path userPath = Paths.get("C:\\DEV\\Servoy7\\application_server\\server\\webapps\\ROOT\\uploads\\reports").toAbsolutePath();
-	//private static final Path userPath = Paths.get("D:\\magWeg\\demo\\debug").toAbsolutePath();
-	
+	// private static final Path userPath =
+	// Paths.get("D:\\Geert\\PROJECTEN\\JASPER_project\\jasperfiles").toAbsolutePath();
+	// private static final Path userPath =
+	// Paths.get("C:\\DEV\\Servoy7\\application_server\\server\\webapps\\ROOT\\uploads\\reports").toAbsolutePath();
+	//private static final Path userPath = Paths.get("D:\\Geert\\PROJECTEN\\JASPER_project\\demoServer\\test").toAbsolutePath();
+
 	public static final String currentRelativePath = userPath.toString();
 	public static final String logPathAndFilename = currentRelativePath + "\\jasperSQLupdater.log";
 	public static final String backupPathMain = currentRelativePath + "\\BU_jasperSQLupdater";
@@ -71,28 +74,20 @@ public class SQLupdater {
 
 		try {
 
-			/*
-			final JFrame frame1 = new JFrame("SQL updater");
-	        frame1.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-	        frame1.setSize(100, 100);
-	        frame1.setLocation(100, 100);
+			JOptionPane pane = new JOptionPane("Processing :", JOptionPane.INFORMATION_MESSAGE,
+					JOptionPane.DEFAULT_OPTION, null, new Object[] {}, null);
+			pane.setSize(750, 100);
+			pane.setMinimumSize(new Dimension(750, 100));
+			pane.setPreferredSize(new Dimension(750, 100));
+			JDialog dialog = pane.createDialog(null, "SQL updater");
+			// pane.setMessage("new message");
+			dialog.setModal(false);
+			dialog.setResizable(true);
+			dialog.setMinimumSize(new Dimension(750, 100));
+			dialog.setPreferredSize(new Dimension(750, 100));
+			dialog.setVisible(true);
+			dialog.setAlwaysOnTop(true);
 
-	        JLabel title = new JLabel("Processing :");
-	        frame1.getContentPane().add(title);
-	        */
-	        JOptionPane pane = new JOptionPane("Processing :", JOptionPane.INFORMATION_MESSAGE, JOptionPane.DEFAULT_OPTION, null, new Object[]{}, null);
-	        pane.setSize(750, 100);
-	        pane.setMinimumSize(new Dimension(750, 100));
-	        pane.setPreferredSize(new Dimension(750, 100));
-            JDialog dialog = pane.createDialog(null, "SQL updater");
-            //pane.setMessage("new message");
-            dialog.setModal(false);
-            dialog.setResizable(true);
-            dialog.setMinimumSize(new Dimension(750, 100));
-            dialog.setPreferredSize(new Dimension(750, 100));
-            dialog.setVisible(true);
-            dialog.setAlwaysOnTop(true);
-	        
 			String logInfo = "STARTING LOG" + CharValues.CRLF + new Date().toString() + CharValues.CRLF
 					+ CharValues.CRLF;
 			Files.write(Paths.get(SQLupdater.logPathAndFilename), logInfo.getBytes("utf-8"), StandardOpenOption.CREATE,
@@ -105,9 +100,18 @@ public class SQLupdater {
 			pane.setMessage("copy *.jasper files to BU folder");
 			FileDAO.copyFilesToBackupFolder("jasper");
 
+			pane.setMessage("Scan *.jasper files and check subreports");
 			Set<String> jasperFilesNoExt = FileDAO.scanStructure("jasper", false, true);
-			jasperSubFilesNoExt = getSubReportNamesNoExt(jasperFilesNoExt);
-
+			try {
+				jasperSubFilesNoExt = getSubReportNamesNoExt(jasperFilesNoExt);
+			} catch (RuntimeException e) {
+				Files.write(Paths.get(SQLupdater.logPathAndFilename), Throwables.getStackTraceAsString(e).getBytes("utf-8"), StandardOpenOption.CREATE,
+						StandardOpenOption.APPEND);
+				JOptionPane.getRootFrame().dispose();
+				JOptionPane.showMessageDialog(null, "logPath" + logPathAndFilename + CharValues.CRLF + Throwables.getStackTraceAsString(e), "Error", JOptionPane.ERROR_MESSAGE);
+				System.exit(0);
+			}
+			
 			for (String pathAndFilenameNoExt : jasperFilesNoExt) {
 
 				if (isSubReport(pathAndFilenameNoExt)) {
@@ -121,7 +125,6 @@ public class SQLupdater {
 					boolean sqlParamPresent = false;
 					System.out.println("\n****************\nfile = " + pathAndFilenameNoExt + ".jasper");
 					pane.setMessage("Processing :\n" + pathAndFilenameNoExt + ".jasper");
-					
 
 					// CHECK PARAM sql
 					JRParameter parameters[] = report.getParameters();
@@ -139,7 +142,7 @@ public class SQLupdater {
 					String queryText = query.getText();
 					boolean queryIsPsql = queryText.equals("$P!{sql}");
 					System.out.println("query equals $P!{sql} = " + queryIsPsql);
-					
+
 					if (sqlParamPresent && queryIsPsql) {
 						System.out.println("NO MODIF :  " + pathAndFilenameNoExt + ".jasper");
 						log.put(pathAndFilenameNoExt + ".jasper", "NO MODIF");
@@ -170,6 +173,7 @@ public class SQLupdater {
 					log.put(pathAndFilenameNoExt + ".jasper",
 							CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
 				}
+				
 
 			}
 
@@ -177,14 +181,18 @@ public class SQLupdater {
 			System.out.println("Files have been altered for correct $SQL param.");
 			System.exit(0);
 
-		} catch (Exception e) {
-			log.put("UNKNOWN.jasper",
-					CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
+		} catch (RuntimeException e) {
 			JOptionPane.showMessageDialog(null,
 					"logPath" + logPathAndFilename + CharValues.CRLF + Throwables.getStackTraceAsString(e), "Error",
 					JOptionPane.ERROR_MESSAGE);
 			System.exit(0);
-		}
+		} catch (Exception e) {
+			log.put("UNKNOWN.jasper", CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
+			JOptionPane.showMessageDialog(null,
+					"logPath" + logPathAndFilename + CharValues.CRLF + Throwables.getStackTraceAsString(e), "Error",
+					JOptionPane.ERROR_MESSAGE);
+			System.exit(0);
+		} 
 	}
 
 	static int i = 1;
@@ -232,11 +240,11 @@ public class SQLupdater {
 
 			try {
 				root.insertBefore(sqlParam, query);
-			} catch(DOMException ex) {
+			} catch (DOMException ex) {
 				System.out.println(ex.toString());
 				throw new RuntimeException("UNEXPECTED EXCEPTION while generating XML\n" + ex.toString());
 			}
-			
+
 		}
 
 		// CONVERT XML doc to string
@@ -273,6 +281,11 @@ public class SQLupdater {
 				for (JRParameter parameter : parameters) {
 					if (parameter.getName().equalsIgnoreCase("SUBREPORT_DIR")) {
 
+						// get list of subreports
+						StringBuilder subReportError = new StringBuilder();
+						subReportError.append("MAIN REPORT = "+ pathAndFilenameNoExt + ".jasper" + CharValues.CRLF);
+						subReportError.append("SUB REPORT EXPRESSIONS :" + CharValues.CRLF);
+						List<String> subReportExpressions = new ArrayList<>();
 						JRBand bands[] = report.getAllBands();
 						for (JRBand band : bands) {
 							List<JRChild> elements = band.getChildren();
@@ -280,35 +293,42 @@ public class SQLupdater {
 								if (child instanceof JRBaseSubreport) {
 									JRBaseSubreport subreport = (JRBaseSubreport) child;
 									String expression = ""; // Lets find out the
-															// expression used
+									// expression used
 									JRExpressionChunk[] chunks = subreport.getExpression().getChunks();
 									for (JRExpressionChunk c : chunks) {
 										expression += c.getText();
 									}
-									int subReportStartPos = expression.indexOf("\"");
-									int subReportEndPos = expression.toLowerCase().indexOf(".jasper");
-									if (subReportStartPos > -1 && subReportEndPos > subReportStartPos) {
-										String subReportNameNoExt = expression.substring(subReportStartPos + 1,
-												subReportEndPos);
-										jasperSubFilesNoExt.add(subReportNameNoExt);
-										// System.out.println(pathAndFilenameNoExt
-										// + ": " + subReportNameNoExt);
-									} else {
-										System.err.println(pathAndFilenameNoExt + ": " + expression);
-										StringBuilder error = new StringBuilder();
-										error.append(CharValues.CRLF);
-										error.append(CharValues.CRLF);
-										error.append("PROGRAM TERMINATED" + CharValues.CRLF);
-										error.append("File :  " + pathAndFilenameNoExt + ".jasper" + CharValues.CRLF);
-										error.append("Unable to detect subreport references :  " + expression + CharValues.CRLF);
-										error.append(CharValues.CRLF);
-										error.append("Please temporarily remove file and its subreports from folder" + CharValues.CRLF);
-										error.append("and manually modify the main report." + CharValues.CRLF);
-										log.put(pathAndFilenameNoExt + ".jasper", error.toString() + CharValues.CRLF);
-										throw new RuntimeException(error.toString());
-									}
-
+									subReportExpressions.add(expression);
+									subReportError.append("- " + expression + CharValues.CRLF);
 								}
+							}
+						}
+						
+						for (String expression : subReportExpressions) {
+							int subReportStartPos = expression.indexOf("\"");
+							int subReportEndPos = expression.toLowerCase().indexOf(".jasper");
+							if (subReportStartPos > -1 && subReportEndPos > subReportStartPos) {
+								String subReportNameNoExt = expression.substring(subReportStartPos + 1,
+										subReportEndPos);
+								jasperSubFilesNoExt.add(subReportNameNoExt);
+								// System.out.println(pathAndFilenameNoExt
+								// + ": " + subReportNameNoExt);
+							} else {
+								System.err.println(pathAndFilenameNoExt + ": " + expression);
+								StringBuilder error = new StringBuilder();
+								error.append(CharValues.CRLF);
+								error.append(CharValues.CRLF);
+								error.append("PROGRAM TERMINATED" + CharValues.CRLF);
+								error.append("File :  " + pathAndFilenameNoExt + ".jasper" + CharValues.CRLF);
+								error.append("Unable to detect subreport references :  " + expression
+										+ CharValues.CRLF);
+								error.append(CharValues.CRLF);
+								error.append("Please temporarily remove file and its subreports from folder : "
+										+ CharValues.CRLF);
+								error.append(subReportError);
+								error.append("and manually modify the main report." + CharValues.CRLF);
+								//log.put(pathAndFilenameNoExt + ".jasper", error.toString() + CharValues.CRLF);
+								throw new RuntimeException(error.toString());
 							}
 						}
 
@@ -324,6 +344,10 @@ public class SQLupdater {
 			} catch (JRException e) {
 				log.put(pathAndFilenameNoExt + ".jasper",
 						CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
+			}
+			catch (RuntimeException e) {
+				log.put(pathAndFilenameNoExt + ".jasper", CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
+				throw new RuntimeException(e.getMessage());
 			}
 		}
 
@@ -352,7 +376,5 @@ public class SQLupdater {
 		return jasperSubFilesNoExt.contains(filenameNoExt);
 
 	}
-	
-	
 
 }
