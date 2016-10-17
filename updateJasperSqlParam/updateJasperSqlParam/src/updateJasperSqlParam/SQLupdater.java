@@ -270,7 +270,8 @@ public class SQLupdater {
 	private static Set<String> getSubReportNamesNoExt(Set<String> jasperFilesNoExt) throws RuntimeException {
 
 		Set<String> jasperSubFilesNoExt = new HashSet<>();
-
+		StringBuilder error = new StringBuilder();
+		
 		// MAIN REPORT OR SUB REPORT ?
 		for (String pathAndFilenameNoExt : jasperFilesNoExt) {
 
@@ -315,7 +316,6 @@ public class SQLupdater {
 								// + ": " + subReportNameNoExt);
 							} else {
 								System.err.println(pathAndFilenameNoExt + ": " + expression);
-								StringBuilder error = new StringBuilder();
 								error.append(CharValues.CRLF);
 								error.append(CharValues.CRLF);
 								error.append("PROGRAM TERMINATED" + CharValues.CRLF);
@@ -327,8 +327,7 @@ public class SQLupdater {
 										+ CharValues.CRLF);
 								error.append(subReportError);
 								error.append("and manually modify the main report." + CharValues.CRLF);
-								//log.put(pathAndFilenameNoExt + ".jasper", error.toString() + CharValues.CRLF);
-								throw new RuntimeException(error.toString());
+								
 							}
 						}
 
@@ -349,6 +348,10 @@ public class SQLupdater {
 				log.put(pathAndFilenameNoExt + ".jasper", CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
 				throw new RuntimeException(e.getMessage());
 			}
+		}
+		
+		if (error.length() > 0) {
+			throw new RuntimeException(error.toString());
 		}
 
 		try {
