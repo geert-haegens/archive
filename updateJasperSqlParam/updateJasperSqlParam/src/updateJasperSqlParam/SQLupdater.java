@@ -61,8 +61,7 @@ public class SQLupdater {
 	// Paths.get("D:\\Geert\\PROJECTEN\\JASPER_project\\jasperfiles").toAbsolutePath();
 	// private static final Path userPath =
 	// Paths.get("C:\\DEV\\Servoy7\\application_server\\server\\webapps\\ROOT\\uploads\\reports").toAbsolutePath();
-	// private static final Path userPath = Paths.get("D:\\Geert\\PROJECTEN\\JASPER_project\\demoServer\\test")
-			.toAbsolutePath();
+	// private static final Path userPath = Paths.get("D:\\Geert\\PROJECTEN\\JASPER_project\\demoServer\\test").toAbsolutePath();
 
 	public static final String currentRelativePath = userPath.toString();
 	public static final String logPathAndFilename = currentRelativePath + "\\jasperSQLupdater.log";
@@ -109,11 +108,7 @@ public class SQLupdater {
 				Files.write(Paths.get(SQLupdater.logPathAndFilename),
 						Throwables.getStackTraceAsString(e).getBytes("utf-8"), StandardOpenOption.CREATE,
 						StandardOpenOption.APPEND);
-				JOptionPane.getRootFrame().dispose();
-				JOptionPane.showMessageDialog(null,
-						"logPath" + logPathAndFilename + CharValues.CRLF + Throwables.getStackTraceAsString(e), "Error",
-						JOptionPane.ERROR_MESSAGE);
-				System.exit(0);
+				throw new RuntimeException(e.getMessage());
 			}
 
 			for (String pathAndFilenameNoExt : jasperFilesNoExt) {
@@ -176,28 +171,28 @@ public class SQLupdater {
 				} catch (JRException e) {
 					log.put(pathAndFilenameNoExt + ".jasper",
 							CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
+				} catch (RuntimeException e) {
+					log.put(pathAndFilenameNoExt + ".jasper",
+							CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
 				}
 
 			}
 
-			FileDAO.writeLog(logPathAndFilename, log);
+			Integer errors = FileDAO.writeLog(logPathAndFilename, log);
 			System.out.println("Files have been altered for correct $SQL param.");
+			JOptionPane.getRootFrame().dispose();
+			JOptionPane.showMessageDialog(null,
+					"logPath" + logPathAndFilename + CharValues.CRLF + "ERRORS = "+errors, "Error",
+					JOptionPane.ERROR_MESSAGE);
 			System.exit(0);
 
-		} catch (RuntimeException e) {
+		} catch (Exception e ) {
 			JOptionPane.getRootFrame().dispose();
 			JOptionPane.showMessageDialog(null,
 					"logPath" + logPathAndFilename + CharValues.CRLF + Throwables.getStackTraceAsString(e), "Error",
 					JOptionPane.ERROR_MESSAGE);
 			System.exit(0);
-		} catch (Exception e) {
-			JOptionPane.getRootFrame().dispose();
-			log.put("UNKNOWN.jasper", CharValues.CRLF + Throwables.getStackTraceAsString(e) + CharValues.CRLF);
-			JOptionPane.showMessageDialog(null,
-					"logPath" + logPathAndFilename + CharValues.CRLF + Throwables.getStackTraceAsString(e), "Error",
-					JOptionPane.ERROR_MESSAGE);
-			System.exit(0);
-		}
+		} 
 	}
 
 	static int i = 1;
@@ -305,7 +300,7 @@ public class SQLupdater {
 									for (JRExpressionChunk c : chunks) {
 										if (c.getType() == 4) {
 											subReportNameErrors++;
-											
+
 										}
 										expression += c.getText();
 									}
@@ -314,18 +309,16 @@ public class SQLupdater {
 								}
 							}
 						}
-						
+
 						if (subReportNameErrors > 0) {
 							System.err.println(pathAndFilenameNoExt + ": $V{} used in subreport name.");
 							error.append(CharValues.CRLF);
 							error.append("PROGRAM TERMINATED" + CharValues.CRLF);
-							error.append(
-									"File :  " + pathAndFilenameNoExt + ".jasper" + CharValues.CRLF);
+							error.append("File :  " + pathAndFilenameNoExt + ".jasper" + CharValues.CRLF);
 							error.append("Unable to detect subreport references due to use of $V{}" + CharValues.CRLF);
 							error.append(CharValues.CRLF);
-							error.append(
-									"Please temporarily remove file and its subreports from folder : "
-											+ CharValues.CRLF);
+							error.append("Please temporarily remove file and its subreports from folder : "
+									+ CharValues.CRLF);
 							error.append(subReportError);
 							error.append("and manually modify the main report." + CharValues.CRLF);
 						}
